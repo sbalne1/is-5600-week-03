@@ -3,35 +3,38 @@ const url = require('url');
 
 const port = process.env.PORT || 3000;
 
-// Text response handler
+// Plain text response
 function respondText(req, res) {
   res.setHeader('Content-Type', 'text/plain');
   res.end('hi');
 }
 
-// JSON response handler
+//  JSON response
 function respondJson(req, res) {
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify({ text: 'hi', numbers: [1, 2, 3] }));
 }
 
-// Main server request handler
+// 404 Not Found response
+function respondNotFound(req, res) {
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('Not Found');
+}
+
+// Routing logic
 const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url, true); // Parse URL to get pathname
+  const parsedUrl = url.parse(req.url);
   const path = parsedUrl.pathname;
 
-  // Simple routing logic
   if (path === '/text') {
     respondText(req, res);
   } else if (path === '/json') {
     respondJson(req, res);
   } else {
-    // Default 404 response for unknown routes
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
+    respondNotFound(req, res); // Reusable 404 handler
   }
 });
 
 server.listen(port, () => {
-  console.log(`Server is listening on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
