@@ -4,31 +4,41 @@ const EventEmitter = require('events');
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Configuration
+const config = {
+  staticFiles: path.join(__dirname, 'public'),
+  chatHTML: path.join(__dirname, 'chat.html')
+};
+
 // Event emitter for real-time messaging
 const chatEmitter = new EventEmitter();
 
 // Middleware
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(config.staticFiles));
 
-// Routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'chat.html'));
-});
-
-app.get('/chat', (req, res) => {
-  const { message } = req.query;
-  
+// Utility function for message validation
+const validateMessage = (message) => {
   if (!message?.trim()) {
-    return res.status(400).send('Message cannot be empty');
+    throw new Error('Message cannot be empty');
   }
+  return message.trim();
+};
 
-  const cleanMessage = message.trim();
-  console.log(`Broadcasting message: "${cleanMessage}"`);
-  chatEmitter.emit('message', cleanMessage);
-  res.end();
-});
+// Route Handlers
+const handleChatRoute = (req, res) => {
+  try {
+    const { message } = req.query;
+    const cleanMessage = validateMessage(message);
+    
+    console.log(`Broadcasting message: "${cleanMessage}"`);
+    chatEmitter.emit('message', cleanMessage);
+    res.end();
+  } catch (error) {
+    res.status(400).send(error.message);
+  }
+};
 
-app.get('/sse', (req, res) => {
+const handleSSEConnection = (req, res) => {
   // Set SSE headers
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -39,25 +49,36 @@ app.get('/sse', (req, res) => {
   // Send initial message
   res.write('data: Connected to chat\n\n');
 
-  // Message handler
   const messageHandler = (msg) => {
     res.write(`data: ${msg}\n\n`);
   };
 
-  // Register handler
   chatEmitter.on('message', messageHandler);
 
-  // Cleanup on disconnect
   req.on('close', () => {
     chatEmitter.off('message', messageHandler);
     console.log('Client disconnected');
   });
+};
+
+// Routes
+app.get('/', (req, res) => res.sendFile(config.chatHTML));
+app.get('/chat', handleChatRoute);
+app.get('/sse', handleSSEConnection);
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
 });
 
+// Server startup
 app.listen(port, () => {
-  console.log(`Chat App running:`);
-  console.log(`- Home:    http://localhost:${port}/`);
-  console.log(`- JSON:    http://localhost:${port}/json`);
-  console.log(`- Echo:    http://localhost:${port}/echo?input=test`);
-  console.log(`- Chat UI: http://localhost:${port}/chat.html`);
+  console.log(`
+  Chat App running:
+  - Home:    http://localhost:${port}/
+  - JSON:    http://localhost:${port}/json
+  - Echo:    http://localhost:${port}/echo?input=test
+  - Chat UI: http://localhost:${port}/chat.html
+  `);
 });
