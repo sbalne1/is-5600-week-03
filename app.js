@@ -37,4 +37,40 @@ const server = http.createServer((req, res) => {
 
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
+});const http = require('http');
+const url = require('url');
+
+const port = process.env.PORT || 3000;
+
+// Handlers
+function respondText(req, res) {
+  res.setHeader('Content-Type', 'text/plain');
+  res.end('hi');
+}
+
+function respondJson(req, res) {
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify({ text: 'hi', numbers: [1, 2, 3] }));
+}
+
+function respondNotFound(req, res) {
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('Not Found');
+}
+
+// Server with routing
+const server = http.createServer((req, res) => {
+  const parsedUrl = url.parse(req.url, true); // `true` parses query strings
+  const pathname = parsedUrl.pathname;
+
+  console.log('Request:', pathname); // Logging for debugging
+
+  if (pathname === '/') return respondText(req, res);
+  if (pathname === '/json') return respondJson(req, res);
+
+  respondNotFound(req, res); // Catch-all for 404s
+});
+
+server.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}/`);
 });
