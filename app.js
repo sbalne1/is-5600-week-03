@@ -1,76 +1,38 @@
-const http = require('http');
-const url = require('url');
-
+const express = require('express');
+const app = express();
 const port = process.env.PORT || 3000;
 
-// Plain text response
+// Handlers (unchanged from original)
 function respondText(req, res) {
-  res.setHeader('Content-Type', 'text/plain');
-  res.end('hi');
-}
-
-//  JSON response
-function respondJson(req, res) {
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify({ text: 'hi', numbers: [1, 2, 3] }));
-}
-
-// 404 Not Found response
-function respondNotFound(req, res) {
-  res.writeHead(404, { 'Content-Type': 'text/plain' });
-  res.end('Not Found');
-}
-
-// Routing logic
-const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url);
-  const path = parsedUrl.pathname;
-
-  if (path === '/text') {
-    respondText(req, res);
-  } else if (path === '/json') {
-    respondJson(req, res);
-  } else {
-    respondNotFound(req, res); // Reusable 404 handler
-  }
-});
-
-server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});const http = require('http');
-const url = require('url');
-
-const port = process.env.PORT || 3000;
-
-// Handlers
-function respondText(req, res) {
-  res.setHeader('Content-Type', 'text/plain');
-  res.end('hi');
+  res.type('text/plain').send('hi');
 }
 
 function respondJson(req, res) {
-  res.setHeader('Content-Type', 'application/json');
-  res.end(JSON.stringify({ text: 'hi', numbers: [1, 2, 3] }));
+  res.json({ text: 'hi', numbers: [1, 2, 3] });
+}
+
+function respondEcho(req, res) {
+  const input = req.query.input || '';
+  res.json({
+    normal: input,
+    shouty: input.toUpperCase(),
+    charCount: input.length,
+    backwards: [...input].reverse().join('')
+  });
 }
 
 function respondNotFound(req, res) {
-  res.writeHead(404, { 'Content-Type': 'text/plain' });
-  res.end('Not Found');
+  res.status(404).type('text/plain').send('Not Found');
 }
 
-// Server with routing
-const server = http.createServer((req, res) => {
-  const parsedUrl = url.parse(req.url, true); // `true` parses query strings
-  const pathname = parsedUrl.pathname;
+// Express routes (clean mapping)
+app.get('/', respondText);
+app.get('/json', respondJson);
+app.get('/echo', respondEcho);
 
-  console.log('Request:', pathname); // Logging for debugging
+// 404 handler (must be last)
+app.use(respondNotFound);
 
-  if (pathname === '/') return respondText(req, res);
-  if (pathname === '/json') return respondJson(req, res);
-
-  respondNotFound(req, res); // Catch-all for 404s
-});
-
-server.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}/`);
+app.listen(port, () => {
+  console.log(`Express server listening on port ${port}`);
 });
